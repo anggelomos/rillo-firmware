@@ -7,7 +7,7 @@ import random
 import unicodedata
 from typing import Union
 
-class new_cell:
+class NewCell:
 	"""Control a braille cell through pwm signals in the gpio ports (BCM)
 
 	Attributes
@@ -49,6 +49,9 @@ class new_cell:
 	parameters
 		Change braille cell attributes.
 
+	trigger
+		Activate the braille cell according to the cell parameters and the dot pattern
+
 	writer
 		Write the text in the braille cell activating consecutively each alphanumer letter.
 
@@ -71,9 +74,9 @@ class new_cell:
 
 	def init(self):
 		"""Initialize all the pins."""
-		for pin in self.braille_pins:
-			pi.set_mode(pin, GPIO.OUTPUT)
-			pi.write(pin, 0)
+		for pin in self.braille_pins.values():
+			NewCell.pi.set_mode(pin, GPIO.OUTPUT)
+			NewCell.pi.write(pin, 0)
 
 	@classmethod
 	def close(cls):
@@ -102,8 +105,8 @@ class new_cell:
 				self.braille_pins[key] = value
 
 		for _, pin in self.braille_pins.items():
-			new_cell.pi.set_mode(pin, GPIO.OUTPUT)
-			new_cell.pi.write(pin, 0)
+			NewCell.pi.set_mode(pin, GPIO.OUTPUT)
+			NewCell.pi.write(pin, 0)
 
 		print(f"\nPinout\n{self.braille_pins}\n")
 
@@ -183,19 +186,19 @@ class new_cell:
 		"""
 
 		signal_value=255*(self.power/5.0)
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
 			
 		time.sleep(self.time_on)
 		
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 		
 		time.sleep(self.time_off)
 
@@ -221,7 +224,7 @@ class new_cell:
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
 
 		while time.time() <= (t_ini + self.time_on):
 			if time.time() < (t_ini + self.time_on/2.0):
@@ -230,15 +233,15 @@ class new_cell:
 			else:
 				signal_value = (255*(self.power/5.0))-(255*(self.power/5.0))/(self.time_on/2.0)*(time.time()-t_ini1)
 			
-			signal_value = new_cell._clamp(signal_value)
+			signal_value = NewCell._clamp(signal_value)
 			signal.append(signal_value)
-			new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+			NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 			
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 
 		time.sleep(self.time_off)
 
@@ -264,21 +267,21 @@ class new_cell:
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
 
 		while time.time() <= (t_ini + self.time_on):
 			signal_value = (255*(self.power/5.0))/(self.time_on)*(time.time()-t_ini)
 
-			signal_value = new_cell._clamp(signal_value)
+			signal_value = NewCell._clamp(signal_value)
 			signal.append(signal_value)
-			new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+			NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 					
 
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 
 		time.sleep(self.time_off)
 
@@ -304,20 +307,20 @@ class new_cell:
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
 		
 		while time.time() <= (t_ini + self.time_on):
 			signal_value = (255*(self.power/5.0))*math.sin((math.pi/self.time_on)*(time.time()-t_ini))
 			
-			signal_value = new_cell._clamp(signal_value)
+			signal_value = NewCell._clamp(signal_value)
 			signal.append(signal_value)
-			new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+			NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 
 		time.sleep(self.time_off)
 
@@ -352,15 +355,15 @@ class new_cell:
 					
 			signal_value = (255.0*math.log10(t_current))*(self.power/5.0)
 			
-			signal_value = new_cell._clamp(signal_value)
+			signal_value = NewCell._clamp(signal_value)
 			signal.append(signal_value)
-			new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+			NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 			
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 
 		time.sleep(self.time_off)
 
@@ -386,7 +389,7 @@ class new_cell:
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
 		
 		while time.time() <= (t_ini + self.time_on):
 			if time.time() < (t_ini + self.time_on/2.0):
@@ -401,15 +404,15 @@ class new_cell:
 					
 			signal_value = (25.5*math.exp(t_current))*(self.power/5.0)
 			
-			signal_value = new_cell._clamp(signal_value)
+			signal_value = NewCell._clamp(signal_value)
 			signal.append(signal_value)
-			new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+			NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 			
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 
 		time.sleep(self.time_off)
 
@@ -435,7 +438,7 @@ class new_cell:
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
 		
 		while time.time() <= (t_ini + self.time_on):
 			
@@ -448,15 +451,15 @@ class new_cell:
 				t_current = (2*((-math.log(10))-math.log(10))/(self.time_on))*(time.time() - t_ini1) + math.log(10) # In this line we remap the time so that is goes from -ln(10) to ln(10)
 				signal_value = (25.5*math.exp(t_current))*(self.power/5.0)
 					
-			signal_value = new_cell._clamp(signal_value)
+			signal_value = NewCell._clamp(signal_value)
 			signal.append(signal_value)
-			new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+			NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 			
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 
 		time.sleep(self.time_off)
 
@@ -482,7 +485,7 @@ class new_cell:
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
 		
 		while time.time() <= (t_ini + self.time_on):
 			if time.time() < (t_ini + self.time_on/2.0):
@@ -493,15 +496,15 @@ class new_cell:
 				t_current = (2*(1-10)/(self.time_on))*(time.time() - t_ini1) + 10
 				signal_value = (255.0*math.log10(t_current))*(self.power/5.0)
 					
-			signal_value = new_cell._clamp(signal_value)
+			signal_value = NewCell._clamp(signal_value)
 			signal.append(signal_value)
-			new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
+			NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], signal_value)
 			
-		new_cell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
+		NewCell.pi.set_PWM_dutycycle(self.braille_pins["signal_pin"], 0)
 		for index, value in enumerate(self.braille_pins.values()):
 			if index == 0:
 				continue
-			new_cell.pi.set_PWM_dutycycle(value, 0)
+			NewCell.pi.set_PWM_dutycycle(value, 0)
 
 		time.sleep(self.time_off)
 
@@ -534,7 +537,7 @@ class new_cell:
 		braille_dictionary = dict(zip(regular_alphabet, braille_alphabet))
 		return braille_dictionary[clean_letter]
 
-	def _trigger(self, dot_pattern: list):
+	def trigger(self, dot_pattern: list):
 		"""Activate the braille cell according to the cell parameters and the dot pattern
 		
 		Parameters
@@ -575,7 +578,7 @@ class new_cell:
 		for active_dot in range(6):
 			vector_generador = [0,0,0,0,0,0]
 			vector_generador[active_dot] = 1
-			self._trigger(vector_generador)
+			self.trigger(vector_generador)
 		
 	def writer(self, text: str):
 		"""Write the text in the braille cell activating consecutively each alphanumer letter.
@@ -589,7 +592,7 @@ class new_cell:
 		for letter in text:
 			if letter.isalpha() or letter == " ":
 				caracter_braille = self._translator(letter)
-				self._trigger(caracter_braille)
+				self.trigger(caracter_braille)
 			else:
 				pass
 
@@ -605,7 +608,7 @@ class new_cell:
 		alfabeto_regular = "abcdefghijklmnñopqrstuvwxyz"
 		letter = alfabeto_regular[random.randint(0,26)]
 		braille_letter = self._translator(letter)
-		self._trigger(braille_letter)
+		self.trigger(braille_letter)
 
 		return letter
 
@@ -617,4 +620,4 @@ class new_cell:
 		for dot in range(6):
 			vector_random[dot] = random.randint(0,1)
 		
-		self._trigger(vector_random)
+		self.trigger(vector_random)
