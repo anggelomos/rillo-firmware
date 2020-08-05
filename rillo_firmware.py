@@ -17,7 +17,7 @@ firebase_admin.initialize_app(cred)
 
 
 db = firestore.client()
-braille_cell = brailfun.new_cell(power=5, time_on=3, time_off=1, signal_type=1)
+braille_cell = brailfun.NewCell(power=5, time_on=3, time_off=1, signal_type=1)
 pigpio_controller = braille_cell.pi
 braille_cell.init()
 spi = spidev.SpiDev()
@@ -100,7 +100,7 @@ def potencia_leds_camara(potencia):
 
     global pin_leds_camara
 
-    pi.write(pin_leds_camara, potencia)
+    pigpio_controller.write(pin_leds_camara, potencia)
 
 def parpadeo_leds():
     """Esta función está hecha para ser llamada por un thread de forma tal que el led de activacion parpadee cuando la batería tenga un nivel de carga bajo"""
@@ -439,16 +439,16 @@ def led_activacion(color_led):
     # Hay 4 colores verde, azul, cian y off
 
     if color_led == 'verde':
-        pi.write(pin_led_rgb_g, 0)
-        pi.write(pin_led_rgb_b, 1)
+        pigpio_controller.write(pin_led_rgb_g, 0)
+        pigpio_controller.write(pin_led_rgb_b, 1)
     
     elif color_led == 'azul':
-        pi.write(pin_led_rgb_g, 1)
-        pi.write(pin_led_rgb_b, 0)
+        pigpio_controller.write(pin_led_rgb_g, 1)
+        pigpio_controller.write(pin_led_rgb_b, 0)
 
     elif color_led == 'off':
-        pi.write(pin_led_rgb_g, 1)
-        pi.write(pin_led_rgb_b, 1)
+        pigpio_controller.write(pin_led_rgb_g, 1)
+        pigpio_controller.write(pin_led_rgb_b, 1)
 
     else:
         print("error: led_activacion, color led no identificado")
@@ -529,7 +529,7 @@ def representar_datos(funcion, datos):
         print("error, funcion no identificada en la lectura de datos digitales")
 
 #interrupciones
-interrupcion_bateria = pi.callback(pin_boton_bateria, GPIO.RISING_EDGE, boton_nivel_bateria)
+interrupcion_bateria = pigpio_controller.callback(pin_boton_bateria, GPIO.RISING_EDGE, boton_nivel_bateria)
 saludo()
 
 try:
