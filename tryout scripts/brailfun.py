@@ -55,14 +55,17 @@ class NewCell:
 	writer
 		Write the text in the braille cell activating consecutively each alphanumer letter.
 
+	generator
+		Activate each dot in the braille cell consecutively.
+
 	random_letter
 		Write a random letter in the braille cell.
 
-	random_vibration
+	random_pattern
 		Generate a random braille pattern and activate it in the braille cell.
 	"""
 
-	def __init__(self, braille_pins: dict={"signal_pin":18, "d1": 4, "d2": 17, "d3": 27, "d4": 22, "d5": 23, "d6": 24}, power: int=5, time_on: float=3, time_off: float=1, signal_type: int=1):
+	def __init__(self, braille_pins: dict={"signal_pin":18, "d1": 22, "d2": 23, "d3": 24, "d4": 27, "d5": 4, "d6": 17}, power: int=5, time_on: float=3, time_off: float=1, signal_type: int=1):
 		self.braille_pins = braille_pins
 		self.power = power
 		self.time_on = time_on
@@ -112,7 +115,7 @@ class NewCell:
 
 		return self.braille_pins
 
-	def parameters(self, power: int=None, time_on: float=None, time_off: float=None, signal_type: int=None):
+	def parameters(self, power: int=None, time_on: float=None, time_off: float=None, signal_type: int=None) -> dict:
 		"""Change braille cell attributes  
 
 		Parameters
@@ -136,7 +139,13 @@ class NewCell:
 				6 - Sine signal
 				7 - Click signal (logarithmic + exponential)
 				8 - Reverse click signal (exponential + logarithmic)
+		
+		Returns
+		-------
+		braille_parameters: dict
+			Braille cell parameters, Ex. {"power":5, "time_on":12, "time_off":3, "signal_type":7}.
 		"""
+
 		if isinstance(power, int):
 			self.power = power
 		
@@ -148,6 +157,9 @@ class NewCell:
 
 		if isinstance(signal_type, int):
 			self.signal_type = signal_type
+		
+		braille_parameters = {"power":self.power, "time_on":self.time_on, "time_off":self.time_off, "signal_type":self.signal_type}
+		return braille_parameters
 
 	@staticmethod
 	def _clamp(value: Union[int, float]) -> Union[int, float]:
@@ -342,9 +354,12 @@ class NewCell:
 
 		signal = []
 		t_ini = time.time()
-		
-		
-		
+
+		for index, value in enumerate(self.braille_pins.values()):
+			if index == 0:
+				continue
+			NewCell.pi.set_PWM_dutycycle(value, 255*braille_pattern[index-1])
+	
 		while time.time() <= (t_ini + self.time_on):
 			if time.time() < (t_ini + self.time_on/2.0):
 				t_current = (2*(10-1)/(self.time_on))*(time.time() - t_ini) + 1 	
@@ -573,7 +588,7 @@ class NewCell:
 			print("ERROR: Wrong signal selector")
 
 	def generator(self):
-		"""Activates each dot in the braille cell consecutively."""
+		"""Activate each dot in the braille cell consecutively."""
 		
 		for active_dot in range(6):
 			vector_generador = [0,0,0,0,0,0]
@@ -610,9 +625,9 @@ class NewCell:
 		braille_letter = self._translator(letter)
 		self.trigger(braille_letter)
 
-		return letter
+		return [letter, braille_letter]
 
-	def random_vibration(self):
+	def random_pattern(self) -> list:
 		"""Generate a random braille pattern and activate it in the braille cell."""
 		
 		vector_random = [0,0,0,0,0,0]
@@ -621,3 +636,5 @@ class NewCell:
 			vector_random[dot] = random.randint(0,1)
 		
 		self.trigger(vector_random)
+
+		return vector_random
