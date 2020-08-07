@@ -8,7 +8,6 @@ import pigpio as GPIO
 import spidev
 import csv
 import time
-import threading
 import brailfun
 
 # Use a service account
@@ -27,8 +26,8 @@ print("inicializando")
 
 # Variables
 nivel_bateria = 0
-t_sleep = 0.5*60               # 5 minutos de inactividad para entrar al modo sleep
-t_shutdown = 1*60           # 30 minutos en modo sleep para apagarse
+t_sleep = 20               # 5 minutos de inactividad para entrar al modo sleep
+t_shutdown = 10           # 30 minutos en modo sleep para apagarse
 t_activated = time.time()
 t_lectura_bateria = 60      # Se mide el nivel de batería cada 60 segundos
 canal_input_bateria = 0     # canal del MCP3008 en el cual ingresa la señal del nivel de bateria, 0 por defecto
@@ -55,7 +54,7 @@ pin_boton_activacion = 6            #pin 31
 pin_boton_bateria = 5               #pin 29
 pin_led_rgb_g = 16                  #pin 36
 pin_led_rgb_b = 13                  #pin 33
-pin_leds_camara = 26                #pin 37
+pin_leds_camara = 12                #pin 37
 
 pigpio_controller.set_mode(pin_indicador_encendido, GPIO.OUTPUT)
 pigpio_controller.set_mode(pin_boton_activacion, GPIO.INPUT)
@@ -81,11 +80,13 @@ def saludo():
     print("saludo")
     
     r_braille = [1, 2, 3, 5]
-
+    current_braille_parameters = braille_cell.parameters()
+    braille_cell.parameters(4, 0.5, 0.5, 1)
     for punto in r_braille:
         celda_braille = [0, 0, 0, 0, 0, 0]
         celda_braille[punto] = 1
         braille_cell.trigger(celda_braille)
+    braille_cell.parameters(current_braille_parameters["power"], current_braille_parameters["time_on"], current_braille_parameters["time_off"], current_braille_parameters["signal_type"])
 
 def apagado_automatico():
     print("rillo out")
@@ -165,7 +166,7 @@ def medir_bateria():
     try:
         doc_ref = db.collection(u'rillo-main').document(u'nivel-bateria')
         doc_ref.update({
-            u'recibido': bateria
+            u'bateria': nivel_bateria
         })
     except:
         print("error, no puede acceder a la base de datos al enviar el nivel de la bateria")
@@ -173,21 +174,10 @@ def medir_bateria():
     if nivel_bateria >= 3.4:
 
         stop_parpadeo_led = True
-
-        try:
-            thread_parpadeo.join()
-        except:
-            print("thread_parpadeo aun no ha sido creado")
     
     elif nivel_bateria < 3.4:
 
         stop_parpadeo_led = False
-        thread_parpadeo = threading.Thread(target=parpadeo_leds)
-        
-        try:
-            thread_parpadeo.start()
-        except:
-            print("Error, tratando de iniciar thread_parpadeo de nuevo, este error no crea conflictos")
 
     elif nivel_bateria <= 3.2:
 
@@ -204,11 +194,6 @@ def modo_activo(gpio, level, tick):
     global t_activated, modo_actual, interrupcion_activo, stop_parpadeo_led
 
     stop_parpadeo_led = True
-
-    try:
-        thread_parpadeo.join()
-    except:
-        print("thread_parpadeo aun no ha sido creado")
 
     t_activated = time.time()    
     modo_actual = "analogico"
@@ -262,13 +247,11 @@ def modo_analogico():
         #Lectura camara %?
         #print("leyendo camera, return 2 variables, [movimiento (boolean), letra (String)")
         #lectura_camara = detectar_letra() %?
-        lectura_camara = [1, "a"]
+        lectura_camara = [0, "a"]
 
         try:
             pass
             braille_cell.writer(lectura_camara[1])
-            print("verde!")
-            
         except:
             pass
         
@@ -276,14 +259,13 @@ def modo_analogico():
             t_ini_ejecucion = time.time()
         
         #Revisar si en la base de datos hubo un cambio, si lo hubo entrar al modo digital      
-
         
         if t_bateria >= t_lectura_bateria:
             
             t_ini_bateria = time.time()
             medir_bateria()
         
-
+        print(t_ejecucion)
         t_ejecucion = time.time() - t_ini_ejecucion
         t_bateria = time.time() - t_ini_bateria
     
@@ -331,13 +313,12 @@ def modo_digital():
             pass
         else:
             representar_datos(funciones['funcion'], funciones['dato'])
-
+            t_ini_ejecucion = time.time()
        
         if funciones['conectado']:
             pass
         else:
             modo_analogico()
-
 
         if t_bateria >= t_lectura_bateria:
                         
@@ -367,20 +348,12 @@ def modo_sleep():
     modo_actual = "sleep"
     potencia_leds_camara(1)
     
-    stop_parpadeo_led = False
-    thread_parpadeo = threading.Thread(target=parpadeo_leds)
-
-    try:
-        thread_parpadeo.start()
-    except:
-        print("Error, tratando de iniciar thread_parpadeo de nuevo, este error no crea conflictos")
-
     t_ejecucion = 0
     t_ini = time.time()
     t_ini_bateria = t_ini
     t_bateria = 0
 
-    interrupcion_activo = pi.callback(pin_boton_activacion, 1, modo_activo)
+    interrupcion_activo = pigpio_controller.callback(pin_boton_activacion, 1, modo_activo)
 
     while (t_ejecucion <= t_shutdown) and modo_actual == "sleep":
 
@@ -391,14 +364,7 @@ def modo_sleep():
             if funciones['recibido']:
                 pass
             else:
-
                 stop_parpadeo_led = True
-
-                try:
-                    thread_parpadeo.join()
-                except:
-                    print("thread_parpadeo aun no ha sido creado")
-
                 modo_digital()
         
         except:
@@ -462,8 +428,10 @@ def boton_nivel_bateria(gpio, level, tick):
 
     print(f"\nnivel de bateria: {nivel_bateria}\n")
 
-    niveles_bateria_braille = [[1, 0, 0, 1, 0, 0], [0, 1, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1]]
+    niveles_bateria_braille = [[0, 0, 1, 0, 0, 1], [0, 1, 0, 0, 1, 0], [1, 0, 0, 1, 0, 0]]
 
+    current_braille_parameters = braille_cell.parameters()
+    braille_cell.parameters(4, 0.5, 0.5, 1)
     if nivel_bateria >= 3.7:
         for n_bateria in niveles_bateria_braille:
             braille_cell.trigger(n_bateria)
@@ -479,6 +447,9 @@ def boton_nivel_bateria(gpio, level, tick):
 
     else:
         print("error, boton nivel bateria, nivel medido no identificado")
+
+    braille_cell.parameters(current_braille_parameters["power"], current_braille_parameters["time_on"], current_braille_parameters["time_off"], current_braille_parameters["signal_type"])
+
 
 def datos_recibidos():
     try:
