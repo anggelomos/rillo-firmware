@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import os
 os.system("sudo pigpiod")
 
@@ -35,7 +37,7 @@ modo_actual = "analogico"   # Modo en el que se encuentra rillo (puede ser digit
 stop_parpadeo_led = False   # Esta variable nos indica si los leds deben dejar de parpadear (solo parpadean cuando rillo tiene la batería baja)
 
 #Leer variables de vibración del csv
-with open('variables_rillo.csv') as csvDataFile:
+with open('/home/pi/variables_rillo.csv') as csvDataFile:
         csvReader = csv.reader(csvDataFile)
         for row in csvReader:
             if row[0] == 'intensidad':
