@@ -72,6 +72,12 @@ class NewCell:
 		self.time_off = time_off
 		self.signal_type = signal_type
 
+	def __repr__(self):
+		return f"NewCell({self.braille_pins}, {self.power}, {self.time_on}, {self.time_off}, {self.signal_type})"
+
+	def __str__(self):
+		return f"Braille Cell\npins: {self.braille_pins}\npower: {self.power}\nActive time: {self.time_on}\nTime between pulses: {self.time_off}\nSignal type: {self.signal_type}\n"
+	
 	# GPIO setup
 	pi = GPIO.pi()
 
