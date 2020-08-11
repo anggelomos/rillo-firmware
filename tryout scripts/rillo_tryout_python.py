@@ -37,7 +37,7 @@ def yield_bateria(gpio, level, tick):
     nivel_bateria = data*5.0/1023
     print(f"Nivel de bateria: {nivel_bateria}\n")
 
-interrupcion_activacion = pi.callback(pin_boton_activacion, GPIO.RISING_EDGE, yield_activation)
+interrupcion_activacion = pi.callback(pin_boton_activacion, GPIO.EITHER_EDGE, yield_activation)
 interrupcion_bateria = pi.callback(pin_boton_bateria, GPIO.RISING_EDGE, yield_bateria)
 
 user_input = "0"
