@@ -220,57 +220,41 @@ def modo_analogico():
     global t_sleep, t_lectura_bateria, modo_actual
 
     modo_actual = "analogico"
-
     potencia_leds_camara(0)
-    braille_cell.trigger([1,0,0,0,0,0])
     led_activacion('verde')      
-
-    t_ini_ejecucion = time.time()
-    t_ini_bateria = t_ini_ejecucion
-    t_bateria = 0
-    t_ejecucion = 0
    
+    try:
+        doc_ref = db.collection(u'rillo-main').document(u'funciones').get()
+        funciones = doc_ref.to_dict()
 
-    while t_ejecucion <= t_sleep:
-        
-        try:
-            doc_ref = db.collection(u'rillo-main').document(u'funciones').get()
-            funciones = doc_ref.to_dict()
-
-            if funciones['recibido']:
-                pass
-            else:
-                modo_digital()
-        
-        except:
-            print("error, no se puede acceder a la base de datos en el modo analogico")
-
-
-        #Lectura camara %?
-        #print("leyendo camera, return 2 variables, [movimiento (boolean), letra (String)")
-        #lectura_camara = detectar_letra() %?
-        lectura_camara = [0, "a"]
-
-        try:
+        if funciones['recibido']:
             pass
-            braille_cell.writer(lectura_camara[1])
-        except:
-            pass
-        
-        if lectura_camara[0]:
-            t_ini_ejecucion = time.time()
-        
-        #Revisar si en la base de datos hubo un cambio, si lo hubo entrar al modo digital      
-        
-        if t_bateria >= t_lectura_bateria:
-            
-            t_ini_bateria = time.time()
-            medir_bateria()
-        
-        print(t_ejecucion)
-        t_ejecucion = time.time() - t_ini_ejecucion
-        t_bateria = time.time() - t_ini_bateria
+        else:
+            modo_digital()
     
+    except:
+        print("error, no se puede acceder a la base de datos en el modo analogico")
+
+    lectura_camara = "a"
+
+    try:
+        doc_ref = db.collection(u'rillo-main').document(u'funciones')
+        doc_ref.update({
+            u'dato': lectura_camara,
+            u'funcion': "camara"
+        })
+    except:
+        print("error, imposible acceder a la base de datos al tratar de escribir el nivel de bateria estando en el modo digital")
+
+    try:
+        braille_cell.writer(lectura_camara)
+    except:
+        print("Error: ")
+    
+    #Revisar si en la base de datos hubo un cambio, si lo hubo entrar al modo digital      
+    medir_bateria()
+
+    time.sleep(t_sleep)
     modo_sleep()
 
 def modo_digital():
@@ -502,7 +486,7 @@ def representar_datos(funcion, datos):
         print("error, funcion no identificada en la lectura de datos digitales")
 
 #interrupciones
-interrupcion_bateria = pigpio_controller.callback(pin_boton_bateria, GPIO.RISING_EDGE, boton_nivel_bateria)
+interrupcion_bateria = pigpio_controller.callback(pin_boton_bateria, GPIO.RISING_EDGE, modo_analogico)
 saludo()
 
 try:
