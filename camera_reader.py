@@ -1,65 +1,50 @@
-#Testing code for OCR
 import cv2
 import numpy as np
-import sys
 
-#---------------------------------------------------------LOADING DATA---------------------------------------------------
-#Loading of data
-samples = np.loadtxt('generalsamples.data',np.float32)
-responses = np.loadtxt('generalresponses.data',np.float32)
-print("Tamaño muestras: ", samples.shape)
-print("Tamaño de respuestas: ", responses.shape)
-responses = responses.reshape((responses.size,1))
+def camera_reader(model, image_size: tuple=(600, 400), image_crop: float=2/3, blur_amount: int=5):
+    """ Read the camera input and processes it to get a string using ocr.
 
-#Model creation and training
-model = cv2.ml.KNearest_create()
-model.train(samples, cv2.ml.ROW_SAMPLE, responses)
+    Parameters
+    ----------
+    model : [type]
+        Trained ocr model
+    image_size : tuple, optional
+        Dimensions of the image resizing, by default (600, 400)
+    image_crop : float, optional
+        Zone of the image that will be processed (from 0 to 1.0), by default 2/3
+    blur_amount : int, optional
+        Amount of blur in the processed image, by default 5
 
-#---------------------------------------------------------TESTING MODEL---------------------------------------------------
+    Returns
+    -------
+    read_character: str
+        Recognized character
+    """
 
-#Loading test image and creation of base image to add the results of identification
-img = cv2.imread("Testing/Image_3.jpg", cv2.IMREAD_COLOR)
-img = cv2.resize(img,(600,400))
-out = np.zeros(img.shape,np.uint8)
-width = len(img[0])*(2/3)
-img = img[:,0:int(width)]
+    capture = cv2.VideoCapture(0)
+    ret, img = capture.read()
+    img = cv2.resize(img,image_size)
+    width = len(img[0])*image_crop
+    img = img[:,0:int(width)]
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray,(blur_amount,)*2,0)
+    thresh = cv2.adaptiveThreshold(blur,255,1,1,31,2)
+    contours,hierarchy = cv2.findContours(thresh,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
 
+    for cnt in contours:
+        if cv2.contourArea(cnt)>2000:
+            [x,y,w,h] = cv2.boundingRect(cnt)
+            if  h>100:
+                try:
+                    roi = thresh[y-50:y+h,x:x+w]
+                except cv2.error:
+                    roi = thresh[y:y+h,x:x+w]
+                roismall = cv2.resize(roi,(10,10))
+                roismall = roismall.reshape((1,100))
+                roismall = np.float32(roismall)
+                retval, results, neigh_resp, dists = model.findNearest(roismall, k = 1)
+                read_character = str(chr((results[0][0])))
 
-#Processing of testing image
-gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-
-#Image Smoothing
-blur = cv2.GaussianBlur(gray,(5,5),0)#suaviza los bordes
-cv2.imshow("Smoothed", blur)
-
-#Thresholding of one-dimensional image
-thresh = cv2.adaptiveThreshold(blur,255,1,1,31,2)
-
-
-cv2.imshow("Preprocessed image", thresh)
-
-#Countours identification with simple methods
-contours,hierarchy = cv2.findContours(thresh,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
-
-for cnt in contours:
-    if cv2.contourArea(cnt)>2000:
-        [x,y,w,h] = cv2.boundingRect(cnt)
-        if  h>100:
-            try:
-                cv2.rectangle(img,(x,y-50),(x+w,y+h),(0,0,255),2)
-                roi = thresh[y-50:y+h,x:x+w]
-                cv2.imshow("LETRA", roi)
-            except cv2.error:
-                cv2.rectangle(img,(x,y),(x+w,y+h),(0,0,255),2)
-                roi = thresh[y:y+h,x:x+w]
-                cv2.imshow("LETRA", roi)
-            roismall = cv2.resize(roi,(10,10))
-            roismall = roismall.reshape((1,100))
-            roismall = np.float32(roismall)
-            retval, results, neigh_resp, dists = model.findNearest(roismall, k = 1)
-            string = str(chr((results[0][0])))
-            cv2.putText(out,string,(x,y+h),0,8,(255,255,255))
-
-cv2.imshow('Input Image',img)
-cv2.imshow('Indentification Result', out)
-cv2.waitKey(0)
+    capture.release()
+    cv2.destroyAllWindows()
+    return read_character

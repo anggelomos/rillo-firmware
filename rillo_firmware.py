@@ -11,18 +11,19 @@ import spidev
 import csv
 import time
 import brailfun
+from camera_reader import camera_reader
 
 # Use a service account
 cred = credentials.Certificate(r'/home/pi/rillo-web-firebase-adminsdk-n5611-e48238a56c.json')
 firebase_admin.initialize_app(cred)
-
 
 db = firestore.client()
 braille_cell = brailfun.NewCell(power=5, time_on=3, time_off=1, signal_type=1)
 pigpio_controller = braille_cell.pi
 braille_cell.init()
 spi = spidev.SpiDev()
-spi.open(0,0) 
+spi.open(0,0)
+ocr_model = ""
 
 print("inicializando")
 
@@ -235,7 +236,7 @@ def modo_analogico():
     except:
         print("error, no se puede acceder a la base de datos en el modo analogico")
 
-    lectura_camara = "a"
+    lectura_camara = camera_reader(ocr_model)
 
     try:
         doc_ref = db.collection(u'rillo-main').document(u'funciones')
@@ -249,7 +250,7 @@ def modo_analogico():
     try:
         braille_cell.writer(lectura_camara)
     except:
-        print("Error: ")
+        print("Error: la letra leida por la camara no pudo ser representada en la celda braille")
     
     #Revisar si en la base de datos hubo un cambio, si lo hubo entrar al modo digital      
     medir_bateria()
